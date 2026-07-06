@@ -7,8 +7,23 @@ import bcrypt from "bcryptjs";
 import prisma from "@/utils/db";
 import { nanoid } from "nanoid";
 
+// Extend NextAuth types to support custom 'role' and 'id' properties safely
+declare module "next-auth" {
+  interface User {
+    role?: string;
+  }
+  interface Session {
+    user: {
+      id?: string;
+      role?: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+    };
+  }
+}
+
 export const authOptions: NextAuthOptions = {
-  // Configure one or more authentication providers
   providers: [
     CredentialsProvider({
       id: "credentials",
@@ -43,26 +58,15 @@ export const authOptions: NextAuthOptions = {
         return null;
       },
     }),
-    // Uncomment and configure these providers as needed
-    // GithubProvider({
-    //   clientId: process.env.GITHUB_ID!,
-    //   clientSecret: process.env.GITHUB_SECRET!,
-    // }),
-    // GoogleProvider({
-    //   clientId: process.env.GOOGLE_CLIENT_ID!,
-    //   clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    // }),
   ],
   callbacks: {
-    async signIn({ user, account }: { user: AuthUser; account: Account }) {
+    async signIn({ user, account }: { user: AuthUser; account: Account | null }) {
       if (account?.provider === "credentials") {
         return true;
       }
       
-      // Handle OAuth providers
       if (account?.provider === "github" || account?.provider === "google") {
         try {
-          // Check if user exists in database
           const existingUser = await prisma.user.findFirst({
             where: {
               email: user.email!,
@@ -70,13 +74,11 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!existingUser) {
-            // Create new user for OAuth providers
             await prisma.user.create({
               data: {
                 id: nanoid(),
                 email: user.email!,
                 role: "user",
-                // OAuth users don't have passwords
                 password: null,
               },
             });
@@ -94,23 +96,21 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = user.role;
         token.id = user.id;
-        token.iat = Math.floor(Date.now() / 1000); // Issued at time
+        token.iat = Math.floor(Date.now() / 1000); 
       }
       
-      // Check if token is expired (15 minutes)
       const now = Math.floor(Date.now() / 1000);
       const tokenAge = now - (token.iat as number);
-      const maxAge = 15 * 60; // 15 minutes
+      const maxAge = 15 * 60; 
       
       if (tokenAge > maxAge) {
-        // Token expired, return empty object to force re-authentication
         return {};
       }
       
       return token;
     },
     async session({ session, token }) {
-      if (token) {
+      if (token && session.user) {
         session.user.role = token.role as string;
         session.user.id = token.id as string;
       }
@@ -119,19 +119,20 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/login',
-    error: '/login', // Redirect to login page on auth errors
+    error: '/login', 
   },
   session: {
     strategy: "jwt",
-    maxAge: 15 * 60, // 15 minutes in seconds
-    updateAge: 5 * 60, // Update session every 5 minutes
+    maxAge: 15 * 60, 
+    updateAge: 5 * 60, 
   },
   jwt: {
-    maxAge: 15 * 60, // 15 minutes in seconds
+    maxAge: 15 * 60, 
   },
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",
 };
 
-export const handler = NextAuth(authOptions);
+// Next.js 15 App Router requirement: ONLY export valid HTTP methods
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
