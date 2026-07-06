@@ -4,7 +4,7 @@ import React from "react";
 import { sanitize } from "@/lib/sanitize";
 
 interface Props {
-  searchParams: { search: string };
+  searchParams: Promise<{ search?: string }>;
 }
 
 // sending api request for search results for a given search text
@@ -55,7 +55,3 @@ const SearchPage = async ({ searchParams }: Props) => {
 };
 
 export default SearchPage;
-
-/*
-
-*/
