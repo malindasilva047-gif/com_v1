@@ -23,7 +23,8 @@ declare module "next-auth" {
   }
 }
 
-export const authOptions: NextAuthOptions = {
+// REMOVED 'export' keyword here to satisfy Next.js 15 routing strictness
+const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       id: "credentials",
