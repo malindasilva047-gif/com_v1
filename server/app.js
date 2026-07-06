@@ -16,7 +16,7 @@ const slugRouter = require("./routes/slugs");
 const orderProductRouter = require('./routes/customer_order_product');
 // const wishlistRouter = require('./routes/wishlist');
 const notificationsRouter = require('./routes/notifications');
-const merchantRouter = require('./routes/merchant'); // Add this line
+const merchantRouter = require('./routes/merchant'); 
 const bulkUploadRouter = require('./routes/bulkUpload');
 var cors = require("cors");
 
@@ -39,14 +39,13 @@ const {
   orderLimiter
 } = require('./middleware/rateLimiter');
 
-
 const {
   handleServerError
 } = require('./utills/errorHandler');
 
 const app = express();
 
-// Trust proxy for accurate IP addresses
+// Trust proxy for accurate IP addresses (Essential for Hugging Face & Vercel routing layers)
 app.set('trust proxy', 1);
 
 // Add request ID to all requests
@@ -68,23 +67,28 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
 ].filter(Boolean); // Remove undefined values
 
-// CORS configuration with origin validation
+// CORS configuration with dynamic origin validation
 const corsOptions = {
   origin: function (origin, callback) {
-
+    // Allow server-to-server or tool requests (like Postman or internal health checks)
     if (!origin) return callback(null, true);
     
-
+    // Check if the origin matches explicit white-listed URLs
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
     
-
+    // Safety fallback: allow development instances
     if (process.env.NODE_ENV === 'development' && origin.startsWith('http://localhost:')) {
       return callback(null, true);
     }
+
+    // Safety fallback: Allow Vercel preview or production URLs dynamically if string configurations match
+    if (origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
     
-    // Reject other origins
+    // Reject other origins if they do not match security expectations
     const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
     return callback(new Error(msg), false);
   },
@@ -113,10 +117,7 @@ app.use("/api/main-image", uploadLimiter);
 app.use("/api/bulk-upload", uploadLimiter);
 
 // Apply stricter rate limiting to authentication-related routes
-app.use("/api/users/email", authLimiter); // For login attempts via email lookup 
-
-// Apply admin rate limiting to admin routes
-
+app.use("/api/users/email", authLimiter); 
 
 app.use("/api/products", productsRouter);
 app.use("/api/categories", categoryRouter);
@@ -170,8 +171,11 @@ app.use((err, req, res, next) => {
   handleServerError(err, res, `${req.method} ${req.path}`);
 });
 
+// Hugging Face routing expects 7860 by default
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+
+// Binding to 0.0.0.0 allows the container to handle external cluster requests cleanly
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
   console.log('Rate limiting and request logging enabled for all endpoints');
   console.log('Logs are being written to server/logs/ directory');

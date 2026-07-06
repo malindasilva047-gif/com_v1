@@ -1,21 +1,19 @@
-// *********************
-// Role of the component: Button for adding product to the cart on the single product page
-// Name of the component: AddToCartSingleProductBtn.tsx
-// Developer: Aleksandar Kuzmanovic
-// Version: 1.0
-// Component call: <AddToCartSingleProductBtn product={product} quantityCount={quantityCount}  />
-// Input parameters: SingleProductBtnProps interface
-// Output: Button with adding to cart functionality
-// *********************
 "use client";
-
-
 
 import React from "react";
 import { useProductStore } from "@/app/_zustand/store";
 import toast from "react-hot-toast";
 
-
+// Explicitly defined the TypeScript interface to resolve the missing type definition error
+interface SingleProductBtnProps {
+  product: {
+    id: string | number;
+    title: string;
+    price: number;
+    mainImage: string;
+  };
+  quantityCount: number;
+}
 
 const AddToCartSingleProductBtn = ({ product, quantityCount } : SingleProductBtnProps) => {
   const { addToCart, calculateTotals } = useProductStore();
@@ -31,6 +29,7 @@ const AddToCartSingleProductBtn = ({ product, quantityCount } : SingleProductBtn
     calculateTotals();
     toast.success("Product added to the cart");
   };
+
   return (
     <button
       onClick={handleAddToCart}
