@@ -54,4 +54,8 @@ const SearchPage = async ({ searchParams }: Props) => {
   );
 };
 
+<<<<<<< HEAD
 export default SearchPage;
+=======
+export default SearchPage;
+>>>>>>> b81937f767fdce31cf64e9ba1c27d4988fdcb432

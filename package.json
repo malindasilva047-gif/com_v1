@@ -3,8 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+<<<<<<< HEAD
     "dev": "prisma generate --schema=./prisma/schema.prisma && next dev",
     "build": "prisma generate --schema=./prisma/schema.prisma && next build",
+=======
+    "dev": "prisma generate --schema=./prisma/schema.prisma && next dev",       
+    "build": "prisma generate --schema=./prisma/schema.prisma && next build",   
+>>>>>>> b81937f767fdce31cf64e9ba1c27d4988fdcb432
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",

@@ -19,4 +19,8 @@ export async function requireAdmin() {
 export async function isAdmin(): Promise<boolean> {
   const session = await getServerSession(authOptions);
   return (session as any)?.user?.role === "admin";
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> b81937f767fdce31cf64e9ba1c27d4988fdcb432
