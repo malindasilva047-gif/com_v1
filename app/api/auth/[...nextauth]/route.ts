@@ -4,11 +4,10 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { nanoid } from "nanoid";
 
 const prisma = new PrismaClient();
 
-export const authOptions = {
+const authOptions = {
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID || "",
