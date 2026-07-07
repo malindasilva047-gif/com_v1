@@ -1,12 +1,15 @@
+// server/prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider     = "mysql"
-  url          = env("DATABASE_URL")
-  relationMode = "prisma"            
+  provider = "mysql"
+  // Prisma 7 හි url ඉවත් කර ඇත. එය prisma.config.ts එකෙන් ගන්නවා
+  relationMode = "prisma"
 }
+
+// ==================== ප්‍රධාන Models ====================
 
 model Product {
   id              String                   @id @default(uuid())
@@ -24,23 +27,25 @@ model Product {
   Wishlist        Wishlist[]
   merchantId      String
   merchant        Merchant                 @relation(fields: [merchantId], references: [id])
-  bulkUploadItems bulk_upload_item[]      @relation("ProductBulkItems")
+  bulkUploadItems bulk_upload_item[]       @relation("ProductBulkItems")
 }
 
 model Image {
-  imageID   String @id @default(uuid())
+  imageID   String  @id @default(uuid())
   productID String
   image     String
 }
 
 model User {
-  id                String              @id @default(uuid())
-  email             String              @unique
+  id                String                @id @default(uuid())
+  email             String                @unique
   password          String?
-  role              String?             @default("user")
+  role              String?               @default("user")
   Wishlist          Wishlist[]
   notifications     Notification[]
-  bulkUploadBatches bulk_upload_batch[] @relation("UserBatches")
+  bulkUploadBatches bulk_upload_batch[]   @relation("UserBatches")
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 }
 
 model Customer_order {
@@ -85,6 +90,53 @@ model Wishlist {
   userId    String
 }
 
+model Merchant {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  email       String?
+  phone       String?
+  address     String?
+  status      String    @default("ACTIVE")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+}
+
+// ==================== Bulk Upload Models ====================
+
+model bulk_upload_batch {
+  id          String              @id @default(uuid())
+  fileName    String?
+  createdAt   DateTime            @default(now())
+  status      BulkUploadStatus    @default(PENDING)
+  itemCount   Int                 @default(0)
+  errorCount  Int                 @default(0)
+  items       bulk_upload_item[]
+  userId      String?
+  user        User?               @relation(name: "UserBatches", fields: [userId], references: [id])
+}
+
+model bulk_upload_item {
+  id          String                @id @default(uuid())
+  batchId     String
+  batch       bulk_upload_batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product?              @relation(name: "ProductBulkItems", fields: [productId], references: [id], onDelete: SetNull)
+  title       String
+  slug        String
+  price       Int
+  manufacturer String?
+  description String?
+  mainImage   String?
+  categoryId  String
+  inStock     Int
+  status      BulkUploadItemStatus  @default(CREATED)
+  error       String?
+}
+
+// ==================== Notification Models ====================
+
 enum NotificationType {
   ORDER_UPDATE
   PAYMENT_STATUS
@@ -100,17 +152,17 @@ enum NotificationPriority {
 }
 
 model Notification {
-  id        String               @id @default(uuid())
-  userId    String
-  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String
-  message   String               @db.Text
-  type      NotificationType
-  isRead    Boolean              @default(false)
-  priority  NotificationPriority @default(NORMAL)
-  metadata  Json?
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
+  id          String              @id @default(uuid())
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  message     String              @db.Text
+  type        NotificationType
+  isRead      Boolean             @default(false)
+  priority    NotificationPriority @default(NORMAL)
+  metadata    Json?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
   @@index([userId])
   @@index([userId, isRead])
@@ -118,48 +170,7 @@ model Notification {
   @@index([createdAt])
 }
 
-model Merchant {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  email       String?
-  phone       String?
-  address     String?
-  status      String   @default("ACTIVE")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  products    Product[]
-}
-
-model bulk_upload_batch {
-  id         String             @id @default(uuid())
-  fileName   String?
-  createdAt  DateTime           @default(now())
-  status     BulkUploadStatus   @default(PENDING)
-  itemCount  Int                @default(0)
-  errorCount Int                @default(0)
-  items      bulk_upload_item[]
-  userId     String?
-  user       User?              @relation(name: "UserBatches", fields: [userId], references: [id])
-}
-
-model bulk_upload_item {
-  id           String               @id @default(uuid())
-  batchId      String
-  batch        bulk_upload_batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  productId    String?
-  product      Product?             @relation(name: "ProductBulkItems", fields: [productId], references: [id], onDelete: SetNull)
-  title        String
-  slug         String
-  price        Int
-  manufacturer String?
-  description  String?
-  mainImage    String?
-  categoryId   String
-  inStock      Int
-  status       BulkUploadItemStatus @default(CREATED)
-  error        String?
-}
+// ==================== Enums ====================
 
 enum BulkUploadStatus {
   PENDING
