@@ -4,11 +4,11 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import prisma from "@/utils/db";
 import { nanoid } from "nanoid";
 
-export const authOptions: NextAuthOptions = {
-  // Configure one or more authentication providers
+const prisma = new PrismaClient();
+
+export const authOptions = {
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID || "",
@@ -55,80 +55,30 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account }: { user: AuthUser; account: Account }) {
-      if (account?.provider === "credentials") {
-        return true;
-      }
-      
-      // Handle OAuth providers
-      if (account?.provider === "github" || account?.provider === "google") {
-        try {
-          // Check if user exists in database
-          const existingUser = await prisma.user.findFirst({
-            where: {
-              email: user.email!,
-            },
-          });
-
-          if (!existingUser) {
-            // Create new user for OAuth providers
-            await prisma.user.create({
-              data: {
-                id: nanoid(),
-                email: user.email!,
-                role: "user",
-                // OAuth users don't have passwords
-                password: null,
-              },
-            });
-          }
-          return true;
-        } catch (error) {
-          console.error("Error in signIn callback:", error);
-          return false;
-        }
-      }
-      
-      return true;
-    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.iat = Math.floor(Date.now() / 1000); // Issued at time
-      }
-      
-      // Check if token is expired (15 minutes)
-      const now = Math.floor(Date.now() / 1000);
-      const tokenAge = now - (token.iat as number);
-      const maxAge = 15 * 60; // 15 minutes
-      
-      if (tokenAge > maxAge) {
-        // Token expired, return empty object to force re-authentication
-        return {};
+        token.role = (user as any).role;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.role = token.role as string;
+      if (session.user) {
+        (session.user as any).id = token.id as string;
+        (session.user as any).role = token.role as string;
       }
       return session;
     },
   },
   pages: {
-    signIn: '/login',
-    error: '/login', // Redirect to login page on auth errors
+    signIn: "/login",
   },
   session: {
     strategy: "jwt",
-    maxAge: 15 * 60, // 15 minutes in seconds
-    updateAge: 5 * 60, // Update session every 5 minutes
-  },
-  jwt: {
-    maxAge: 15 * 60, // 15 minutes in seconds
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-export const handler = NextAuth(authOptions);
+const handler = NextAuth(authOptions);
+
 export { handler as GET, handler as POST };
